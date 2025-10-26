@@ -1,19 +1,23 @@
-from flask import request,Flask,render_template,url_for,redirect,flash
-from data import User
+from flask import Flask, render_template, request, redirect, url_for, session
+from data import User, TodoList
+from datetime import datetime
 import time
-def check_user(user):
-    data=User().check_valid_user(user)
-    return True if data else False
-def check_password(user,password):
-    data=User().check_password(user,password)
-    if data: return True
-    return False
 
-app=Flask(__name__)
+app = Flask(__name__)
 app.secret_key = "secret"
+
+
+def check_user(user):
+    return User().check_valid_user(user)
+
+
+def check_password(user, password):
+    return User().check_password(user, password)
+
+
 @app.route('/')
 def home():
-    return (render_template('login.html'))
+    return render_template('login.html')
 
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -23,21 +27,19 @@ def login():
         password = request.form.get('password')
 
         if not user or not password:
-            flash("Vui lòng nhập đầy đủ thông tin!")
             return redirect(url_for('home'))
-
-        if check_user(user):
-            flash("Tên không hợp lệ hoặc đã được đặt!")
+        if not check_user(user):
             return redirect(url_for('home'))
-
         if not check_password(user, password):
-            flash("Sai mật khẩu!")
             return redirect(url_for('home'))
 
-        flash(f"Chào mừng trở lại, {user}!")
+        session['username'] = user
+        session['name'] = User().get_name(user)
         return redirect(url_for('index'))
 
     return redirect(url_for('home'))
+
+
 @app.route("/register", methods=['POST', 'GET'])
 def register():
     if request.method == 'POST':
@@ -47,30 +49,72 @@ def register():
         confirm = request.form.get('confirm-password')
 
         if not username or not password or not name or not confirm:
-            flash("Vui lòng nhập đầy đủ thông tin!")
             return redirect(url_for('register'))
 
         if password != confirm:
-            flash("Xác nhận mật khẩu thất bại")
             return redirect(url_for('register'))
 
         if check_user(username):
-            flash("Tên người dùng đã tồn tại!")
             return redirect(url_for('register'))
 
-        # tạo user mới
         User().create_user(user=username, name=name, password=password)
-        flash("Đăng ký thành công! Bạn có thể đăng nhập ngay.")
-        time.sleep(2)
+        time.sleep(1)
         return redirect(url_for('login'))
 
     return render_template("register.html")
 
 
-@app.route("/index")
+@app.route('/index')
 def index():
-    return render_template('index.html')
+    username = session.get('username')
+    display_name = session.get('name')
+    if not username:
+        return redirect(url_for('home'))
+
+    todo = TodoList()
+    today = datetime.now().strftime("%Y-%m-%d")
+    tasks = todo.get_work(username, date=today)
+    return render_template('index.html', username=display_name, current_date=today, tasks=tasks)
 
 
-if __name__=='__main__':
+@app.route('/add_task', methods=['POST'])
+def add_task():
+    username = session.get('username')
+    if not username:
+        return redirect(url_for('home'))
+
+    work = request.form.get('work')
+    if work:
+        todo = TodoList()
+        todo.add_work(username, work)
+    return redirect(url_for('index'))
+
+
+@app.route('/complete_task', methods=['POST'])
+def complete_task():
+    username = session.get('username')
+    if not username:
+        return redirect(url_for('home'))
+
+    work = request.form.get('work')
+    if work:
+        todo = TodoList()
+        todo.done_work(username, work)
+    return redirect(url_for('index'))
+
+
+@app.route('/delete_task', methods=['POST'])
+def delete_task():
+    username = session.get('username')
+    if not username:
+        return redirect(url_for('home'))
+
+    work = request.form.get('work')
+    if work:
+        todo = TodoList()
+        todo.done_work(username, work)
+    return redirect(url_for('index'))
+
+
+if __name__ == '__main__':
     app.run(debug=True)
