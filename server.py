@@ -73,7 +73,7 @@ def index():
 
     todo = TodoList()
     today = datetime.now().strftime("%Y-%m-%d")
-    tasks = todo.get_work(username, date=today)
+    tasks = todo.get_work(username)
     return render_template('index.html', username=display_name, current_date=today, tasks=tasks)
 
 
@@ -117,4 +117,5 @@ def delete_task():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
+

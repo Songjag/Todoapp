@@ -63,7 +63,7 @@ class TodoList:
     def add_work(self, user, work, date=None):
     
         if date is None:
-            date = datetime.now().strftime("%Y-%m-%d")
+            date= datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.cursor.execute(
             'INSERT INTO todolist (user, work, date_of_work) VALUES (?, ?, ?)',
             (user, work, date)
